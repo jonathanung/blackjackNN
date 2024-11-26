@@ -1,3 +1,7 @@
+import os
+import sys
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(project_root)
 import tkinter as tk
 from tkinter import ttk, messagebox
 from main import Action, Card
@@ -40,14 +44,33 @@ class DecisionHelperGUI:
         self.main_frame = ttk.Frame(root, padding="10")
         self.main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
+        # Add after creating the main frame
+        self.style = ttk.Style()
+        self.style.configure("Green.TLabel", foreground="green")
+        self.style.configure("Orange.TLabel", foreground="orange")
+        self.style.configure("Red.TLabel", foreground="red")
+        self.style.configure("Default.TLabel", foreground="black")
+        
         # Player hand section
         ttk.Label(self.main_frame, text="Your Hand Value:", font=('Arial', 12)).grid(row=0, column=0, pady=5)
-        self.player_value = ttk.Entry(self.main_frame, width=10)
+        self.player_value = ttk.Entry(
+            self.main_frame, 
+            width=10, 
+            validate='key', 
+            validatecommand=(self.root.register(self.validate_number), '%P')
+        )
         self.player_value.grid(row=0, column=1, pady=5)
+        self.player_value.bind('<KeyRelease>', self.on_input_change)
         
         ttk.Label(self.main_frame, text="Number of Cards:", font=('Arial', 12)).grid(row=1, column=0, pady=5)
-        self.num_cards = ttk.Entry(self.main_frame, width=10)
+        self.num_cards = ttk.Entry(
+            self.main_frame, 
+            width=10, 
+            validate='key', 
+            validatecommand=(self.root.register(self.validate_cards), '%P')
+        )
         self.num_cards.grid(row=1, column=1, pady=5)
+        self.num_cards.bind('<KeyRelease>', self.on_input_change)
         
         # Dealer card section
         ttk.Label(self.main_frame, text="Dealer's Visible Card:", font=('Arial', 12)).grid(row=2, column=0, pady=5)
@@ -63,6 +86,7 @@ class DecisionHelperGUI:
         )
         self.dealer_card_dropdown.grid(row=2, column=1, pady=5)
         self.dealer_card_dropdown.set(self.dealer_cards[0])
+        self.dealer_card_var.trace_add('write', self.on_dealer_card_change)
         
         # Get suggestion button
         ttk.Button(
@@ -78,18 +102,12 @@ class DecisionHelperGUI:
         self.suggestion_label = ttk.Label(
             self.suggestion_frame, 
             text="Suggestion will appear here",
-            font=('Arial', 14, 'bold')
+            font=('Arial', 14, 'bold'),
+            style="Default.TLabel"
         )
         self.suggestion_label.pack()
         
-        # Add confidence display
-        ttk.Label(self.main_frame, text="Agent Confidence:", 
-                 font=('Arial', 12)).grid(row=4, column=0, pady=5)
-        self.confidence_label = ttk.Label(self.main_frame, text="", 
-                                        font=('Arial', 12))
-        self.confidence_label.grid(row=4, column=1, pady=5)
-
-        # Add detailed Q-values display
+        # Add detailed Q-values display first (around row 5)
         self.q_values_frame = ttk.LabelFrame(self.main_frame, text="Action Values", 
                                            padding="10")
         self.q_values_frame.grid(row=5, column=0, columnspan=2, pady=10)
@@ -103,6 +121,18 @@ class DecisionHelperGUI:
                                                   text="0.00", 
                                                   font=('Arial', 12))
             self.q_value_labels[action].grid(row=i, column=1, padx=5)
+        
+        # Move confidence display below Q-values frame (now row 6)
+        ttk.Label(self.main_frame, 
+            text="Agent Confidence:", 
+            font=('Arial', 12)
+        ).grid(row=6, column=0, pady=5)
+        
+        self.confidence_label = ttk.Label(self.main_frame, 
+            text="", 
+            font=('Arial', 12)
+        )
+        self.confidence_label.grid(row=6, column=1, pady=5)
         
         # Add some padding to all widgets
         for child in self.main_frame.winfo_children():
@@ -159,23 +189,136 @@ class DecisionHelperGUI:
                     q_value = q_values[action.value].item()
                     prob = action_probs[action.value].item()
                     self.q_value_labels[action].config(
-                        text=f"Q: {q_value:.2f} (P: {prob:.2%})")
+                        text=f"Q: {q_value:.2f}\n(P: {prob:.2%})")
                 
                 best_action_idx = q_values.argmax().item()
                 confidence = action_probs[best_action_idx].item()
                 
                 # Update suggestion and confidence
                 suggestion = Action(best_action_idx).name
-                self.suggestion_label.config(text=f"Suggested Action: {suggestion}")
-                self.confidence_label.config(text=f"Confidence: {confidence:.2%}")
+                self.suggestion_label.config(text=f"Suggested Action:\n{suggestion}")
+                self.confidence_label.config(
+                    text=f"{confidence:.1%}"
+                )
                 
                 # Color code based on confidence
-                color = "green" if confidence > 0.8 else "orange" if confidence > 0.6 else "red"
-                self.suggestion_label.config(fg=color)
+                color_style = "Green.TLabel" if confidence > 0.8 else "Orange.TLabel" if confidence > 0.6 else "Red.TLabel"
+                self.suggestion_label.configure(style=color_style)
                 
         except ValueError:
             messagebox.showerror("Error", "Please enter valid numbers")
             return
+
+    def validate_number(self, value):
+        """Validate player hand value input"""
+        if value == "":
+            return True
+        try:
+            num = int(value)
+            return 1 <= num <= 21
+        except ValueError:
+            return False
+
+    def validate_cards(self, value):
+        """Validate number of cards input"""
+        if value == "":
+            return True
+        try:
+            num = int(value)
+            return 1 <= num <= 5  # Maximum 5 cards possible
+        except ValueError:
+            return False
+
+    def on_input_change(self, event=None):
+        """Handle any input change"""
+        if self.is_input_valid():
+            self.update_suggestion()
+        else:
+            self.clear_suggestion()
+
+    def on_dealer_card_change(self, *args):
+        """Handle dealer card selection change"""
+        if self.is_input_valid():
+            self.update_suggestion()
+
+    def is_input_valid(self):
+        """Check if all inputs are valid"""
+        try:
+            player_value = int(self.player_value.get())
+            num_cards = int(self.num_cards.get())
+            return (1 <= player_value <= 21 and 
+                   1 <= num_cards <= 5 and 
+                   self.dealer_card_var.get() in self.dealer_cards)
+        except ValueError:
+            return False
+
+    def clear_suggestion(self):
+        """Clear all suggestion displays"""
+        self.suggestion_label.configure(
+            text="Enter valid values", 
+            style="Default.TLabel"
+        )
+        self.confidence_label.config(text="")
+        for action in Action:
+            self.q_value_labels[action].config(text="")
+
+    def update_suggestion(self):
+        """Update the suggestion based on current inputs"""
+        try:
+            # Create state dictionary from inputs
+            player_value = int(self.player_value.get())
+            num_cards = int(self.num_cards.get())
+            dealer_card = self.dealer_card_var.get()
+            
+            # Convert face cards to values
+            if dealer_card in ['J', 'Q', 'K']:
+                dealer_value = 10
+            elif dealer_card == 'A':
+                dealer_value = 11
+            else:
+                dealer_value = int(dealer_card)
+            
+            # Create mock state
+            state = {
+                'player_value': player_value,
+                'player_hand': [Card('♠', 'X')] * num_cards,  # Dummy cards
+                'dealer_visible': Card('♠', dealer_card),
+                'dealer_hand': [Card('♠', dealer_card)]
+            }
+            
+            # Get Q-values and action from agent
+            with torch.no_grad():
+                state_tensor = self.agent.state_to_tensor(state)
+                q_values = self.agent.q_network(state_tensor)
+                action_probs = torch.softmax(q_values, dim=0)
+                
+                # Update Q-value displays
+                for action in Action:
+                    q_value = q_values[action.value].item()
+                    prob = action_probs[action.value].item()
+                    self.q_value_labels[action].config(
+                        text=f"Q: {q_value:.2f}\n(P: {prob:.2%})")
+                
+                best_action_idx = q_values.argmax().item()
+                confidence = action_probs[best_action_idx].item()
+                
+                # Update suggestion and confidence
+                suggestion = Action(best_action_idx).name
+                self.suggestion_label.config(text=f"Suggested Action:\n{suggestion}")
+                self.confidence_label.config(
+                    text=f"{confidence:.1%}"
+                )
+                
+                # Color code based on confidence
+                color_style = (
+                    "Green.TLabel" if confidence > 0.8 
+                    else "Orange.TLabel" if confidence > 0.6 
+                    else "Red.TLabel"
+                )
+                self.suggestion_label.configure(style=color_style)
+                
+        except ValueError:
+            self.clear_suggestion()
 
 if __name__ == "__main__":
     root = tk.Tk()

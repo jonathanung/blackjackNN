@@ -1,3 +1,8 @@
+import os
+import sys
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(project_root)
+from main import Action
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -5,7 +10,6 @@ import numpy as np
 import random
 from collections import deque
 import pickle
-from main import Action
 
 class QNetwork(nn.Module):
     """

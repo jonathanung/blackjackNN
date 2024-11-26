@@ -1,3 +1,7 @@
+import os
+import sys
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(project_root)
 import tkinter as tk
 from tkinter import messagebox
 from main import BlackjackEnv, Action
@@ -100,11 +104,13 @@ class BlackjackGUI:
         # Modify button creation to store references
         self.buttons = {
             Action.HIT: tk.Button(self.button_frame, text="Hit", command=self.hit),
-            Action.STAND: tk.Button(self.button_frame, text="Stand", command=self.stand)
+            Action.STAND: tk.Button(self.button_frame, text="Stand", command=self.stand),
+            Action.DOUBLE: tk.Button(self.button_frame, text="Double", command=self.double)
         }
         
         self.buttons[Action.HIT].pack(side=tk.LEFT, padx=5)
         self.buttons[Action.STAND].pack(side=tk.LEFT, padx=5)
+        self.buttons[Action.DOUBLE].pack(side=tk.LEFT, padx=5)
         self.new_game_button = tk.Button(self.button_frame, text="New Game", command=self.new_game)
         self.new_game_button.pack(side=tk.LEFT, padx=5)
         
@@ -284,7 +290,16 @@ class BlackjackGUI:
         """
         # Disable double button after first action
         if len(self.env.player_hand.cards) > 2:
-            self.double_button.config(state='disabled')
+            self.buttons[Action.DOUBLE].config(state='disabled')
+    
+    def double(self):
+        """
+        Executes the "Double Down" action within the game's environment.
+        This allows the player to double their bet, receive exactly one more card, and automatically stand.
+        """
+        state, reward, done = self.env.step(Action.DOUBLE)
+        self.update_display(show_all=True)
+        self.game_over(reward)
 
 if __name__ == "__main__":
     root = tk.Tk()

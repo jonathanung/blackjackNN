@@ -1,4 +1,8 @@
+import os
 import sys
+# Get the absolute path to the project root directory (parent of the script's directory)
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(project_root)
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
