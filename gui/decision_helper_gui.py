@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from main import Action, Card
-from blackjack_agent import DeepQLearningAgent
+from agent.blackjack_agent import DeepQLearningAgent
 import torch
 
 class DecisionHelperGUI:

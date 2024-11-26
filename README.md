@@ -43,7 +43,7 @@ pip install -r requirements.txt
 ### Training the Agent
 
 ```bash
-python train_agent.py [num_episodes]
+python ./agent/train_agent.py [num_episodes]
 ```
 
 This will:
@@ -55,7 +55,7 @@ This will:
 ### Playing Blackjack
 
 ```bash
-python blackjack_gui.py
+python ./gui/blackjack_gui.py
 ```
 
 Features:
@@ -67,7 +67,7 @@ Features:
 ### Getting Strategy Advice
 
 ```bash
-python decision_helper_gui.py
+python ./gui/decision_helper_gui.py
 ```
 
 This will open a GUI interface for getting real-time strategy advice from the trained agent.

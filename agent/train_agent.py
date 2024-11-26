@@ -3,7 +3,7 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from main import BlackjackEnv
-from blackjack_agent import DeepQLearningAgent
+from agent.blackjack_agent import DeepQLearningAgent
 
 def train_agent(num_episodes=5000, eval_interval=1000):
     """
@@ -42,7 +42,7 @@ def train_agent(num_episodes=5000, eval_interval=1000):
     win_rates = []
     
     # Create log file
-    log_file = open('training_log.txt', 'w')
+    log_file = open('../training_log.txt', 'w')
     log_file.write("Training Log\n")
     log_file.write("============\n\n")
     
@@ -149,7 +149,7 @@ def evaluate_agent(num_episodes=1000):
         return
     
     # Create evaluation log file
-    eval_log = open('evaluation_log.txt', 'w')
+    eval_log = open('../evaluation_log.txt', 'w')
     eval_log.write("Evaluation Results\n")
     eval_log.write("==================\n\n")
     
