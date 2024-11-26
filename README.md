@@ -52,6 +52,8 @@ This will:
 - Save the trained model as 'blackjack_agent.pkl'
 - Create detailed training logs
 
+If you want to train the agent on a GPU or MPS, you can uncomment the relevant lines in `blackjack_agent.py` under the `__init__` method.
+
 ### Playing Blackjack
 
 ```bash
