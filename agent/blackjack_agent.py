@@ -100,7 +100,8 @@ class DeepQLearningAgent:
     """
     def __init__(self, input_size=6, hidden_size=128, learning_rate=0.0003, gamma=0.99,
                  epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.9995):
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+        # self.device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+        self.device = torch.device("cpu")
         print(f"Using device: {self.device}")
         
         # Neural Network
