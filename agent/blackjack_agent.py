@@ -256,13 +256,16 @@ class DeepQLearningAgent:
         - optimizer state dictionary
         - epsilon value
         """
+        res_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'res')
+        os.makedirs(res_dir, exist_ok=True)
+        filepath = os.path.join(res_dir, filename)
         state_dict = {
             'q_network': self.q_network.state_dict(),
             'target_network': self.target_network.state_dict(),
             'optimizer': self.optimizer.state_dict(),
             'epsilon': self.epsilon
         }
-        with open(filename, 'wb') as f:
+        with open(filepath, 'wb') as f:
             pickle.dump(state_dict, f)
 
     def load(self, filename='blackjack_agent.pkl'):
@@ -282,7 +285,8 @@ class DeepQLearningAgent:
         Raises:
         FileNotFoundError: If the specified file does not exist.
         """
-        with open(filename, 'rb') as f:
+        filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'res', filename)
+        with open(filepath, 'rb') as f:
             state_dict = pickle.load(f)
         
         self.q_network.load_state_dict(state_dict['q_network'])

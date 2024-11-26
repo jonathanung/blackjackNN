@@ -2,6 +2,9 @@
 **/__pycache__/
 .idea
 
+/agent/res/*
+!agent/res/.gitkeep
+
 blackjack_agent.pkl
 evaluation_logs.txt
 training_logs.txt

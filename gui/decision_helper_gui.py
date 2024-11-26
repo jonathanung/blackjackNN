@@ -33,7 +33,8 @@ class DecisionHelperGUI:
         # Load the trained agent
         self.agent = DeepQLearningAgent()
         try:
-            self.agent.load()
+            agent_path = os.path.join(project_root, 'agent', 'res', 'blackjack_agent.pkl')
+            self.agent.load(agent_path)
             print("Loaded trained agent successfully")
         except FileNotFoundError:
             print("No trained agent found")

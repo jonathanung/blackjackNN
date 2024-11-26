@@ -1,5 +1,6 @@
 import os
 import sys
+import os.path
 # Get the absolute path to the project root directory (parent of the script's directory)
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(project_root)
@@ -8,6 +9,10 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 from main import BlackjackEnv
 from agent.blackjack_agent import DeepQLearningAgent
+
+# Create res directory if it doesn't exist
+res_dir = os.path.join(project_root, 'agent', 'res')
+os.makedirs(res_dir, exist_ok=True)
 
 def train_agent(num_episodes=5000, eval_interval=1000):
     """
@@ -46,7 +51,7 @@ def train_agent(num_episodes=5000, eval_interval=1000):
     win_rates = []
     
     # Create log file
-    log_file = open('../training_log.txt', 'w')
+    log_file = open(os.path.join(res_dir, 'training_logs.txt'), 'w')
     log_file.write("Training Log\n")
     log_file.write("============\n\n")
     
@@ -115,7 +120,7 @@ def train_agent(num_episodes=5000, eval_interval=1000):
     plt.ylim(0, 1)
     
     plt.tight_layout()
-    plt.savefig('training_metrics.png')
+    plt.savefig(os.path.join(res_dir, 'training_metrics.png'))
     plt.close()
     
     print("\nSaving trained agent...")
@@ -153,7 +158,7 @@ def evaluate_agent(num_episodes=1000):
         return
     
     # Create evaluation log file
-    eval_log = open('../evaluation_log.txt', 'w')
+    eval_log = open(os.path.join(res_dir, 'evaluation_logs.txt'), 'w')
     eval_log.write("Evaluation Results\n")
     eval_log.write("==================\n\n")
     
