@@ -229,9 +229,14 @@ def evaluate_agent(num_episodes=10000, parallel_games=100):
 if __name__ == "__main__":
     # Get number of episodes from command line argument, default to 5000 if not provided
     num_episodes = 50000
+    parallel_games = 1000
     if len(sys.argv) > 1:
         try:
             num_episodes = int(sys.argv[1])
+            try:
+                parallel_games = int(sys.argv[2])
+            except ValueError:
+                print(f"No specified number of parallel games, using default value of 1000.")
         except ValueError:
             print(f"No specified number of episodes, using default value of 50000.")
     
