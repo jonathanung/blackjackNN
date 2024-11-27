@@ -5,7 +5,7 @@
 /agent/res/*
 !agent/res/.gitkeep
 
-blackjack_agent.pkl
-evaluation_logs.txt
-training_logs.txt
-training_metrics.png
+# blackjack_agent.pkl
+# evaluation_logs.txt
+# training_logs.txt
+# training_metrics.png
