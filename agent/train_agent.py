@@ -16,6 +16,8 @@ res_dir = os.path.join(project_root, 'agent', 'res')
 os.makedirs(res_dir, exist_ok=True)
 
 def train_agent(num_episodes=50000, parallel_games=10000):
+    print("torch.cuda.is_available(): ", torch.cuda.is_available())
+    print("torch.backends.mps.is_available(): ", torch.backends.mps.is_available())
     agent = DeepQLearningAgent()
     
     # Initialize metrics tracking
