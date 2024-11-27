@@ -41,7 +41,7 @@ def train_agent(num_episodes=50000, parallel_games=1000):
     
     for episode_batch in progress_bar:
         batch_rewards = []
-        
+
         while not all(dones):
             actions = [agent.choose_action(state) for state in states]
             for i, env in enumerate(envs):
@@ -139,7 +139,6 @@ def evaluate_agent(num_episodes=10000, parallel_games=100):
     envs = [BlackjackEnv() for _ in range(parallel_games)]
     states = [env.reset()[0] for env in envs]
     dones = [False] * parallel_games
-    
     # Create evaluation log file with utf-8 encoding
     eval_log = open(os.path.join(res_dir, 'evaluation_logs.txt'), 'w', encoding='utf-8')
     eval_log.write("Evaluation Results\n")
