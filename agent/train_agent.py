@@ -7,117 +7,108 @@ sys.path.append(project_root)
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-from main import BlackjackEnv
+from main import BlackjackEnv, Action
 from agent.blackjack_agent import DeepQLearningAgent
+import torch
 
 # Create res directory if it doesn't exist
 res_dir = os.path.join(project_root, 'agent', 'res')
 os.makedirs(res_dir, exist_ok=True)
 
-def train_agent(num_episodes=5000, eval_interval=1000):
-    """
-        Trains a Deep Q-Learning agent on the Blackjack environment for a specified number of episodes.
-
-        Parameters:
-        num_episodes (int): The number of episodes to train the agent. Default is 500,000.
-        eval_interval (int): The frequency at which to log training details. Default is 1,000.
-
-        Variables:
-        env (BlackjackEnv): Instance of the Blackjack environment
-        agent (DeepQLearningAgent): Instance of the Deep Q-Learning agent
-        all_rewards (list): List to keep track of rewards for each episode
-        cumulative_rewards (list): List to keep track of cumulative average rewards over episodes
-        win_rates (list): List to keep track of win rates over episodes
-        log_file (file object): File object for logging training details
-
-        Process:
-        - Initializes the environment and agent
-        - Initializes metrics lists for rewards, cumulative rewards, and win rates
-        - Opens a log file to write training details
-        - Runs the training loop over the specified number of episodes
-        - In each episode, resets the environment and tracks states, actions, and rewards
-        - Tracks cumulative average rewards and win rates for logging and progress display
-        - Logs details every 100 episodes
-        - Updates a progress bar with the current average reward, win rate, and agent's epsilon value
-        - Closes the log file after training is complete
-        - Plots and saves training metrics as a PNG image
-    """
-    env = BlackjackEnv()
+def train_agent(num_episodes=50000, parallel_games=1000):
+    print("torch.cuda.is_available(): ", torch.cuda.is_available())
+    print("torch.backends.mps.is_available(): ", torch.backends.mps.is_available())
     agent = DeepQLearningAgent()
     
-    # Training metrics
+    # Initialize metrics tracking
     all_rewards = []
-    cumulative_rewards = []
     win_rates = []
+    epsilons = []
+    episodes_list = []
     
-    # Create log file with utf-8 encoding
-    log_file = open(os.path.join(res_dir, 'training_logs.txt'), 'w', encoding='utf-8')
-    log_file.write("Training Log\n")
-    log_file.write("============\n\n")
+    # Create training log file with utf-8 encoding
+    train_log = open(os.path.join(res_dir, 'training_logs.txt'), 'w', encoding='utf-8')
+    train_log.write("Training Results\n")
+    train_log.write("================\n\n")
     
-    # Training loop
-    progress_bar = tqdm(range(num_episodes), desc="Training")
-    for episode in progress_bar:
-        state, _, _ = env.reset()
-        episode_reward = 0
-        episode_actions = []
-        episode_states = []
-        done = False
+    # Initialize vectorized environments
+    envs = [BlackjackEnv() for _ in range(parallel_games)]
+    states = [env.reset()[0] for env in envs]
+    dones = [False] * parallel_games
+    transitions = []
+    
+    progress_bar = tqdm(range(0, num_episodes, parallel_games), desc="Training")
+    
+    for episode_batch in progress_bar:
+        batch_rewards = []
+
+        while not all(dones):
+            actions = [agent.choose_action(state) for state in states]
+            for i, env in enumerate(envs):
+                if dones[i]:
+                    continue
+                next_state, reward, done = env.step(actions[i])
+                transitions.append((states[i], actions[i], reward, next_state, done))
+                states[i] = next_state
+                dones[i] = done
+                batch_rewards.append(reward)
         
-        while not done:
-            action = agent.choose_action(state)
-            episode_states.append(state)
-            episode_actions.append(action)
+        # Store and learn from all transitions
+        agent.store_parallel_transitions(transitions)
+        
+        # Reset for next batch
+        states = [env.reset()[0] for env in envs]
+        dones = [False] * parallel_games
+        transitions.clear()
+        
+        # Update metrics
+        if batch_rewards:
+            current_avg_reward = np.mean(batch_rewards)
+            current_win_rate = len([r for r in batch_rewards if r > 0]) / len(batch_rewards)
             
-            next_state, reward, done = env.step(action)
-            agent.store_transition(state, action, reward, next_state, done)
-            agent.train()
+            all_rewards.append(current_avg_reward)
+            win_rates.append(current_win_rate)
+            epsilons.append(agent.epsilon)
+            episodes_list.append(episode_batch + parallel_games)
             
-            state = next_state
-            episode_reward += reward
-        
-        all_rewards.append(episode_reward)
-        
-        # Calculate cumulative metrics
-        current_avg_reward = np.mean(all_rewards)
-        cumulative_rewards.append(current_avg_reward)
-        current_win_rate = len([r for r in all_rewards if r > 0]) / len(all_rewards)
-        win_rates.append(current_win_rate)
-        
-        # Log episode details
-        log_file.write(f"\nEpisode {episode}\n")
-        log_file.write(f"States: {episode_states}\n")
-        log_file.write(f"Actions: {episode_actions}\n")
-        log_file.write(f"Reward: {episode_reward}\n")
-        log_file.write(f"Cumulative Avg Reward: {current_avg_reward:.3f}\n")
-        log_file.write(f"Cumulative Win Rate: {current_win_rate:.3f}\n")
-        log_file.write("-" * 50 + "\n")
-        
-        # Update progress bar
-        progress_bar.set_postfix({
-            'Avg Reward': f'{current_avg_reward:.3f}',
-            'Win Rate': f'{current_win_rate:.3f}',
-            'Epsilon': f'{agent.epsilon:.3f}'
-        })
+            # Log episode details
+            train_log.write(f"\nEpisode Batch {episode_batch}-{episode_batch + parallel_games}\n")
+            train_log.write(f"Average Reward: {current_avg_reward:.3f}\n")
+            train_log.write(f"Win Rate: {current_win_rate:.3f}\n")
+            train_log.write(f"Epsilon: {agent.epsilon:.3f}\n")
+            train_log.write("-" * 50 + "\n")
+            
+            progress_bar.set_postfix({
+                'Avg Reward': f'{current_avg_reward:.3f}',
+                'Win Rate': f'{current_win_rate:.3f}',
+                'Epsilon': f'{agent.epsilon:.3f}'
+            })
     
-    log_file.close()
+    train_log.close()
     
     # Plot training metrics
     plt.figure(figsize=(15, 5))
     
-    plt.subplot(1, 2, 1)
-    plt.plot(range(num_episodes), cumulative_rewards)
-    plt.title('Cumulative Average Reward over Training')
+    # Plot rewards
+    plt.subplot(131)
+    plt.plot(episodes_list, all_rewards)
+    plt.title('Average Reward over Time')
     plt.xlabel('Episodes')
     plt.ylabel('Average Reward')
-    plt.ylim(-2, 2)
     
-    plt.subplot(1, 2, 2)
-    plt.plot(range(num_episodes), win_rates)
-    plt.title('Cumulative Win Rate over Training')
+    # Plot win rates
+    plt.subplot(132)
+    plt.plot(episodes_list, win_rates)
+    plt.title('Win Rate over Time')
     plt.xlabel('Episodes')
     plt.ylabel('Win Rate')
-    plt.ylim(0, 1)
+    
+    # Plot epsilon decay
+    plt.subplot(133)
+    plt.plot(episodes_list, epsilons)
+    plt.title('Epsilon Decay')
+    plt.xlabel('Episodes')
+    plt.ylabel('Epsilon')
     
     plt.tight_layout()
     plt.savefig(os.path.join(res_dir, 'training_metrics.png'))
@@ -128,27 +119,14 @@ def train_agent(num_episodes=5000, eval_interval=1000):
     
     return agent
 
-def evaluate_agent(num_episodes=1000):
+def evaluate_agent(num_episodes=10000, parallel_games=100):
     """
-    Evaluates the performance of a trained Deep Q-Learning agent in a Blackjack environment over a specified number of episodes.
-
+    Evaluates the performance of a trained Deep Q-Learning agent in parallel.
+    
     Parameters:
-        num_episodes (int): The number of episodes to run for evaluation (default is 1000).
-
-    Returns:
-        None
-
-    Creates an evaluation log file 'evaluation_log.txt' and writes the following information:
-        - Detailed state-action-reward sequence for each episode.
-        - Summary statistics including:
-          - Average reward per episode.
-          - Win rate (proportion of positive rewards).
-
-    Notes:
-        - The agent is loaded from a pre-trained state. If no such state is found, the function exits with a message.
-        - Utilizes tqdm for a progress bar representation during evaluation.
+        num_episodes (int): Total number of episodes to evaluate
+        parallel_games (int): Number of games to run in parallel
     """
-    env = BlackjackEnv()
     agent = DeepQLearningAgent()
     
     try:
@@ -157,43 +135,89 @@ def evaluate_agent(num_episodes=1000):
         print("No trained agent found!")
         return
     
+    # Initialize vectorized environments
+    envs = [BlackjackEnv() for _ in range(parallel_games)]
+    states = [env.reset()[0] for env in envs]
+    dones = [False] * parallel_games
     # Create evaluation log file with utf-8 encoding
     eval_log = open(os.path.join(res_dir, 'evaluation_logs.txt'), 'w', encoding='utf-8')
     eval_log.write("Evaluation Results\n")
     eval_log.write("==================\n\n")
     
-    rewards = []
-    for episode in tqdm(range(num_episodes), desc="Evaluating"):
-        state, _, _ = env.reset()
-        done = False
-        episode_reward = 0
-        episode_actions = []
-        episode_states = []
+    wins = 0
+    total_games = 0
+    all_rewards = []
+    
+    progress_bar = tqdm(range(0, num_episodes, parallel_games), desc="Evaluating")
+    
+    for _ in progress_bar:
+        episode_rewards = [0] * parallel_games
+        episode_actions = [[] for _ in range(parallel_games)]
+        episode_states = [[] for _ in range(parallel_games)]
         
-        while not done:
-            action = agent.choose_action(state, training=False)
-            episode_states.append(state)
-            episode_actions.append(action)
+        # Run episodes until all are done
+        while not all(dones):
+            # Get actions for all non-done states
+            actions = [
+                agent.choose_action(state, training=False) 
+                if not done else None 
+                for state, done in zip(states, dones)
+            ]
             
-            state, reward, done = env.step(action)
-            episode_reward += reward
+            # Step through all environments
+            for i, (env, action) in enumerate(zip(envs, actions)):
+                if dones[i]:
+                    continue
+                    
+                episode_states[i].append(states[i])
+                episode_actions[i].append(action)
+                
+                next_state, reward, done = env.step(action)
+                episode_rewards[i] += reward
+                states[i] = next_state
+                dones[i] = done
         
-        rewards.append(episode_reward)
+        # Process results for all completed episodes
+        for i in range(parallel_games):
+            all_rewards.append(episode_rewards[i])
+            
+            # Count wins with double weight for double downs
+            if episode_actions[i] and episode_actions[i][-1] == Action.DOUBLE:
+                total_games += 2
+                if episode_rewards[i] > 0:
+                    wins += 2
+            else:
+                total_games += 1
+                if episode_rewards[i] > 0:
+                    wins += 1
+            
+            # Log each episode
+            eval_log.write(f"\nEpisode {i}\n")
+            eval_log.write(f"States: {episode_states[i]}\n")
+            eval_log.write(f"Actions: {episode_actions[i]}\n")
+            eval_log.write(f"Final Reward: {episode_rewards[i]}\n")
+            eval_log.write("-" * 50 + "\n")
         
-        # Log each episode
-        eval_log.write(f"\nEpisode {episode}\n")
-        eval_log.write(f"States: {episode_states}\n")
-        eval_log.write(f"Actions: {episode_actions}\n")
-        eval_log.write(f"Final Reward: {episode_reward}\n")
-        eval_log.write("-" * 50 + "\n")
+        # Reset environments for next batch
+        states = [env.reset()[0] for env in envs]
+        dones = [False] * parallel_games
+        
+        # Update progress bar with current metrics
+        win_rate = wins / total_games if total_games > 0 else 0
+        avg_reward = np.mean(all_rewards) if all_rewards else 0
+        progress_bar.set_postfix({
+            'Avg Reward': f'{avg_reward:.3f}',
+            'Win Rate': f'{win_rate:.3f}'
+        })
     
-    win_rate = len([r for r in rewards if r > 0]) / num_episodes
-    avg_reward = np.mean(rewards)
+    # Log final statistics
+    win_rate = wins / total_games
+    avg_reward = np.mean(all_rewards)
     
-    # Log summary statistics
     eval_log.write("\nSummary Statistics\n")
     eval_log.write(f"Average Reward: {avg_reward:.3f}\n")
     eval_log.write(f"Win Rate: {win_rate:.3f}\n")
+    eval_log.write(f"Total Games (including double downs): {total_games}\n")
     
     eval_log.close()
     
@@ -203,14 +227,19 @@ def evaluate_agent(num_episodes=1000):
 
 if __name__ == "__main__":
     # Get number of episodes from command line argument, default to 5000 if not provided
-    num_episodes = 5000
+    num_episodes = 50000
+    parallel_games = 1000
     if len(sys.argv) > 1:
         try:
             num_episodes = int(sys.argv[1])
+            try:
+                parallel_games = int(sys.argv[2])
+            except ValueError:
+                print(f"No specified number of parallel games, using default value of 1000.")
         except ValueError:
-            print(f"No specified number of episodes, using default value of 5000.")
+            print(f"No specified number of episodes, using default value of 50000.")
     
-    print(f"Starting training for {num_episodes} episodes...")
-    train_agent(num_episodes=num_episodes)
+    print(f"Starting training for {num_episodes} episodes... and {parallel_games} parallel games")
+    train_agent(num_episodes=num_episodes, parallel_games=parallel_games)
     print("\nEvaluating trained agent...")
     evaluate_agent()
