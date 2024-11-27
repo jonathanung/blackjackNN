@@ -113,8 +113,8 @@ class DeepQLearningAgent:
         self.criterion = nn.MSELoss()
         
         # Experience Replay
-        self.memory = deque(maxlen=100000)
-        self.batch_size = 10000
+        self.memory = deque(maxlen=10000)
+        self.batch_size = 1000
         self.parallel_memory = []  # Temporary storage for parallel experiences
         
         # Exploration parameters
