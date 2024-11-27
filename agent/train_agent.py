@@ -240,7 +240,7 @@ if __name__ == "__main__":
         except ValueError:
             print(f"No specified number of episodes, using default value of 50000.")
     
-    print(f"Starting training for {num_episodes} episodes...")
-    train_agent(num_episodes=num_episodes)
+    print(f"Starting training for {num_episodes} episodes... and {parallel_games} parallel games")
+    train_agent(num_episodes=num_episodes, parallel_games=parallel_games)
     print("\nEvaluating trained agent...")
     evaluate_agent()
