@@ -228,12 +228,12 @@ def evaluate_agent(num_episodes=10000, parallel_games=100):
 
 if __name__ == "__main__":
     # Get number of episodes from command line argument, default to 5000 if not provided
-    num_episodes = 5000
+    num_episodes = 50000
     if len(sys.argv) > 1:
         try:
             num_episodes = int(sys.argv[1])
         except ValueError:
-            print(f"No specified number of episodes, using default value of 5000.")
+            print(f"No specified number of episodes, using default value of 50000.")
     
     print(f"Starting training for {num_episodes} episodes...")
     train_agent(num_episodes=num_episodes)
