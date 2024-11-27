@@ -50,8 +50,8 @@ def train_agent(num_episodes=5000, eval_interval=1000):
     cumulative_rewards = []
     win_rates = []
     
-    # Create log file
-    log_file = open(os.path.join(res_dir, 'training_logs.txt'), 'w')
+    # Create log file with utf-8 encoding
+    log_file = open(os.path.join(res_dir, 'training_logs.txt'), 'w', encoding='utf-8')
     log_file.write("Training Log\n")
     log_file.write("============\n\n")
     
@@ -157,8 +157,8 @@ def evaluate_agent(num_episodes=1000):
         print("No trained agent found!")
         return
     
-    # Create evaluation log file
-    eval_log = open(os.path.join(res_dir, 'evaluation_logs.txt'), 'w')
+    # Create evaluation log file with utf-8 encoding
+    eval_log = open(os.path.join(res_dir, 'evaluation_logs.txt'), 'w', encoding='utf-8')
     eval_log.write("Evaluation Results\n")
     eval_log.write("==================\n\n")
     
