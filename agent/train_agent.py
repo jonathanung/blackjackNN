@@ -24,8 +24,8 @@ def train_agent(num_episodes=50000, parallel_games=10000):
     epsilons = []
     episodes_list = []
     
-    # Create training log file
-    train_log = open(os.path.join(res_dir, 'training_logs.txt'), 'w')
+    # Create training log file with utf-8 encoding
+    train_log = open(os.path.join(res_dir, 'training_logs.txt'), 'w', encoding='utf-8')
     train_log.write("Training Results\n")
     train_log.write("================\n\n")
     
@@ -138,8 +138,8 @@ def evaluate_agent(num_episodes=10000, parallel_games=100):
     states = [env.reset()[0] for env in envs]
     dones = [False] * parallel_games
     
-    # Create evaluation log file
-    eval_log = open(os.path.join(res_dir, 'evaluation_logs.txt'), 'w')
+    # Create evaluation log file with utf-8 encoding
+    eval_log = open(os.path.join(res_dir, 'evaluation_logs.txt'), 'w', encoding='utf-8')
     eval_log.write("Evaluation Results\n")
     eval_log.write("==================\n\n")
     
