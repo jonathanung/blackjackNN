@@ -100,8 +100,8 @@ class DeepQLearningAgent:
     """
     def __init__(self, input_size=6, hidden_size=128, learning_rate=0.0003, gamma=0.99,
                  epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.9995):
-        # self.device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
-        self.device = torch.device("cpu")
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+        # self.device = torch.device("cpu")
         print(f"Using device: {self.device}")
         
         # Neural Network
@@ -114,7 +114,8 @@ class DeepQLearningAgent:
         
         # Experience Replay
         self.memory = deque(maxlen=10000)
-        self.batch_size = 64
+        self.batch_size = 1000
+        self.parallel_memory = []  # Temporary storage for parallel experiences
         
         # Exploration parameters
         self.epsilon = epsilon_start
@@ -191,6 +192,15 @@ class DeepQLearningAgent:
             done: A boolean flag indicating whether the episode has terminated.
         """
         self.memory.append((state, action, reward, next_state, done))
+
+    def store_parallel_transitions(self, transitions):
+        """Store multiple transitions from parallel games"""
+        self.parallel_memory.extend(transitions)
+        if len(self.parallel_memory) >= self.batch_size:
+            # Transfer to main memory and train
+            self.memory.extend(self.parallel_memory)
+            self.parallel_memory = []
+            self.train()
 
     def train(self):
         """
