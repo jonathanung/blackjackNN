@@ -104,3 +104,7 @@ The training process generates:
 - More sophisticated reward shaping
 - Train with multiple agents in parallel to simulate multiplayer Blackjack
 - Implement agents in multiplayer Blackjack game, allowing players to choose their position on the table
+
+
+### Data over 10M episodes in 750 size batches
+![Training Metrics](agent/res/training_metrics.png)
